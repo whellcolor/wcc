@@ -606,4 +606,19 @@ Tahap berikutnya yang bisa lanjut dibuat:
 20. `Launchpad Presale system`
 
 
+# Dukung Proyek Ini
+
+## Wallet Ethereum
+Scan QR berikut untuk mengirim donasi:
+
+![QR Ethereum](https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=ethereum:0xd8519A8b8825Aa0DcC73aAD572f447FAE102fe88)
+
+Alamat langsung:  
+`0xd8519A8b8825Aa0DcC73aAD572f447FAE102fe88`
+
+## Langganan PayPal
+Klik tombol di bawah ini untuk berlangganan:
+
+[![Subscribe](https://www.paypalobjects.com/en_US/i/btn/btn_subscribe_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=JZ8YZT9LM257A)
+
 
