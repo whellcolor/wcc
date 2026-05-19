@@ -488,3 +488,688 @@ export default function AdminPage() {
   );
 }
 ```
+# Module 21 — `contracts/launchpad/Presale.sol`
+
+```solidity id="6wq30f"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+contract Presale {
+
+    IERC20 public token;
+
+    address public owner;
+
+    uint256 public tokenPrice;
+
+    uint256 public tokensSold;
+
+    uint256 public startTime;
+
+    uint256 public endTime;
+
+    mapping(address => uint256)
+        public purchased;
+
+    event TokensPurchased(
+        address buyer,
+        uint256 amount
+    );
+
+    modifier onlyOwner() {
+        require(
+            msg.sender == owner,
+            "Not owner"
+        );
+        _;
+    }
+
+    constructor(
+        address tokenAddress,
+        uint256 price,
+        uint256 duration
+    ) {
+
+        token = IERC20(tokenAddress);
+
+        tokenPrice = price;
+
+        owner = msg.sender;
+
+        startTime = block.timestamp;
+
+        endTime =
+            block.timestamp + duration;
+    }
+
+    function buyTokens()
+        external
+        payable
+    {
+
+        require(
+            block.timestamp < endTime,
+            "Presale ended"
+        );
+
+        uint256 amount =
+            msg.value / tokenPrice;
+
+        require(
+            amount > 0,
+            "Invalid purchase"
+        );
+
+        purchased[msg.sender] += amount;
+
+        tokensSold += amount;
+
+        token.transfer(
+            msg.sender,
+            amount
+        );
+
+        emit TokensPurchased(
+            msg.sender,
+            amount
+        );
+    }
+
+    function withdraw()
+        external
+        onlyOwner
+    {
+        payable(owner).transfer(
+            address(this).balance
+        );
+    }
+}
+```
+
+---
+
+# Module 22 — `contracts/launchpad/Vesting.sol`
+
+```solidity id="e8dlgi"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+contract Vesting {
+
+    IERC20 public token;
+
+    address public beneficiary;
+
+    uint256 public releaseTime;
+
+    uint256 public amount;
+
+    constructor(
+        address tokenAddress,
+        address user,
+        uint256 unlockTime,
+        uint256 tokenAmount
+    ) {
+
+        token = IERC20(tokenAddress);
+
+        beneficiary = user;
+
+        releaseTime = unlockTime;
+
+        amount = tokenAmount;
+    }
+
+    function release()
+        external
+    {
+
+        require(
+            block.timestamp >= releaseTime,
+            "Locked"
+        );
+
+        token.transfer(
+            beneficiary,
+            amount
+        );
+
+        amount = 0;
+    }
+}
+```
+
+---
+
+# Module 23 — `contracts/launchpad/LiquidityLocker.sol`
+
+```solidity id="4m5g8n"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+contract LiquidityLocker {
+
+    address public owner;
+
+    uint256 public unlockTime;
+
+    constructor(
+        uint256 duration
+    ) {
+
+        owner = msg.sender;
+
+        unlockTime =
+            block.timestamp + duration;
+    }
+
+    function unlock()
+        external
+    {
+
+        require(
+            msg.sender == owner,
+            "Not owner"
+        );
+
+        require(
+            block.timestamp >= unlockTime,
+            "Still locked"
+        );
+
+        payable(owner).transfer(
+            address(this).balance
+        );
+    }
+
+    receive() external payable {}
+}
+```
+
+---
+
+# Module 24 — `contracts/dex/SwapHelper.sol`
+
+```solidity id="mr4j0u"
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+interface IRouter {
+
+    function swapExactETHForTokens(
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    )
+        external
+        payable
+        returns(uint[] memory amounts);
+}
+
+contract SwapHelper {
+
+    address public router;
+
+    constructor(address _router) {
+        router = _router;
+    }
+
+    function buyToken(
+        address token
+    )
+        external
+        payable
+    {
+
+        address[] memory path =
+            new address[](2);
+
+        path[0] =
+            0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+
+        path[1] = token;
+
+        IRouter(router)
+            .swapExactETHForTokens{
+                value: msg.value
+            }(
+                0,
+                path,
+                msg.sender,
+                block.timestamp + 300
+            );
+    }
+}
+```
+
+---
+
+# Module 25 — `frontend/components/ui/Sidebar.tsx`
+
+```tsx id="04k6rj"
+'use client';
+
+import Link from 'next/link';
+
+export default function Sidebar() {
+
+  return (
+    <aside className="
+      w-72
+      min-h-screen
+      bg-[#0b1120]
+      border-r
+      border-cyan-500/30
+      p-6
+    ">
+
+      <h1 className="
+        text-3xl
+        font-bold
+        text-cyan-400
+        mb-10
+      ">
+        WCC DAPP
+      </h1>
+
+      <div className="
+        flex
+        flex-col
+        gap-5
+      ">
+
+        <Link href="/">
+          Dashboard
+        </Link>
+
+        <Link href="/generator">
+          Meme Generator
+        </Link>
+
+        <Link href="/staking">
+          Staking
+        </Link>
+
+        <Link href="/analytics">
+          Analytics
+        </Link>
+
+        <Link href="/admin">
+          Admin
+        </Link>
+
+      </div>
+
+    </aside>
+  );
+}
+```
+
+---
+
+# Module 26 — `frontend/components/ui/Navbar.tsx`
+
+```tsx id="52kmlc"
+'use client';
+
+import SmartWalletConnect
+from '../wallet/SmartWalletConnect';
+
+export default function Navbar() {
+
+  return (
+    <nav className="
+      w-full
+      p-5
+      border-b
+      border-cyan-500/20
+      flex
+      items-center
+      justify-between
+    ">
+
+      <div className="
+        text-cyan-400
+        font-bold
+        text-2xl
+      ">
+        WHELLCOLOR
+      </div>
+
+      <SmartWalletConnect />
+
+    </nav>
+  );
+}
+```
+
+---
+
+# Module 27 — `frontend/app/dashboard/page.tsx`
+
+```tsx id="1c0kec"
+'use client';
+
+import Sidebar
+from '../../components/ui/Sidebar';
+
+import Navbar
+from '../../components/ui/Navbar';
+
+export default function Dashboard() {
+
+  return (
+    <main className="
+      flex
+      min-h-screen
+      bg-[#050816]
+      text-white
+    ">
+
+      <Sidebar />
+
+      <div className="flex-1">
+
+        <Navbar />
+
+        <div className="p-10">
+
+          <h1 className="
+            text-5xl
+            font-bold
+            mb-10
+          ">
+            Dashboard
+          </h1>
+
+          <div className="
+            grid
+            grid-cols-4
+            gap-6
+          ">
+
+            <div className="
+              neon-card
+              p-6
+            ">
+              Revenue
+            </div>
+
+            <div className="
+              neon-card
+              p-6
+            ">
+              Deploys
+            </div>
+
+            <div className="
+              neon-card
+              p-6
+            ">
+              TVL
+            </div>
+
+            <div className="
+              neon-card
+              p-6
+            ">
+              Users
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+  );
+}
+```
+
+---
+
+# Module 28 — `ai-engine/token-name-generator.ts`
+
+```ts id="b4wzk1"
+const names = [
+  "DOGEX",
+  "PEPEMAX",
+  "MOONINU",
+  "SHIBAWCC",
+  "CYBERDOGE"
+];
+
+export function generateTokenName() {
+
+  const random =
+    Math.floor(
+      Math.random() * names.length
+    );
+
+  return names[random];
+}
+```
+
+---
+
+# Module 29 — `ai-engine/tokenomics-generator.ts`
+
+```ts id="7pv5vr"
+export function generateTokenomics() {
+
+  return {
+    supply: 1000000000,
+    burn: "2%",
+    liquidity: "5%",
+    marketing: "3%",
+    rewards: "2%"
+  };
+}
+```
+
+---
+
+# Module 30 — `backend/src/api/ai/generate.ts`
+
+```ts id="jq5qeq"
+import {
+  generateTokenName
+} from '../../../../ai-engine/token-name-generator';
+
+import {
+  generateTokenomics
+} from '../../../../ai-engine/tokenomics-generator';
+
+export async function generateAI() {
+
+  return {
+    name:
+      generateTokenName(),
+
+    tokenomics:
+      generateTokenomics()
+  };
+}
+```
+
+---
+
+# Module 31 — `frontend/app/meme-generator/page.tsx`
+
+```tsx id="uyvfrf"
+'use client';
+
+import { useState }
+from 'react';
+
+export default function MemeGenerator() {
+
+  const [generated,setGenerated] =
+    useState<any>(null);
+
+  async function runAI() {
+
+    setGenerated({
+      name: 'DOGEX',
+      symbol: 'DOGEX',
+      supply: '1000000000'
+    });
+
+  }
+
+  return (
+    <main className="
+      min-h-screen
+      bg-black
+      text-white
+      p-10
+    ">
+
+      <h1 className="
+        text-5xl
+        font-bold
+        mb-10
+      ">
+        AI MEME ENGINE
+      </h1>
+
+      <button
+        onClick={runAI}
+        className="
+          bg-cyan-500
+          p-4
+          rounded-xl
+        "
+      >
+        Generate AI Token
+      </button>
+
+      {generated && (
+
+        <div className="
+          neon-card
+          p-8
+          mt-10
+        ">
+
+          <div>
+            Name:
+            {generated.name}
+          </div>
+
+          <div>
+            Symbol:
+            {generated.symbol}
+          </div>
+
+          <div>
+            Supply:
+            {generated.supply}
+          </div>
+
+        </div>
+
+      )}
+
+    </main>
+  );
+}
+```
+
+---
+
+# Module 32 — `scripts/verify.ts`
+
+```ts id="4a6rcg"
+import hre from "hardhat";
+
+async function main() {
+
+  const address =
+    process.argv[2];
+
+  await hre.run(
+    "verify:verify",
+    {
+      address
+    }
+  );
+
+  console.log(
+    "Verified:",
+    address
+  );
+}
+
+main();
+```
+
+---
+
+# Module 33 — `.env.production`
+
+```env id="r1rlvw"
+NEXT_PUBLIC_CHAIN_ID=8453
+
+NEXT_PUBLIC_RPC_URL=
+
+NEXT_PUBLIC_FACTORY_ADDRESS=
+
+NEXT_PUBLIC_THIRDWEB_CLIENT_ID=
+
+THIRDWEB_SECRET_KEY=
+
+SUPABASE_URL=
+SUPABASE_KEY=
+
+FIREBASE_API_KEY=
+
+ETHERSCAN_API_KEY=
+
+PRIVATE_KEY=
+```
+
+---
+
+# Module 34 — `docker/backend.Dockerfile`
+
+```dockerfile id="x0r56n"
+FROM node:20
+
+WORKDIR /app
+
+COPY . .
+
+RUN npm install
+
+EXPOSE 3001
+
+CMD ["npm","run","dev"]
+```
+
+---
+
+# Module 35 — `docker/frontend.Dockerfile`
+
+```dockerfile id="rrgl5j"
+FROM node:20
+
+WORKDIR /app
+
+COPY . .
+
+RUN npm install
+
+RUN npm run build
+
+EXPOSE 3000
+
+CMD ["npm","run","start"]
+```
+
